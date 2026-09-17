@@ -49,14 +49,13 @@ cuts through a block.
 
 ## Borrowed from
 
-Slicing floorplans are a VLSI thing: Otten, *Automatic Floorplan Design* (1982)
-and Wong & Liu, *A New Algorithm for Floorplan Design* (1986). The router is
-Lee's maze router (1961) with a turn penalty. Being honest, it's also just a
-treemap with gaps, so Shneiderman (1991) and the squarify trick from Bruls,
-Huizing and van Wijk (2000). CodeCity did code-as-a-place back in 2007, and Pad
-(Perlin & Fox, 1993) did the zoom thing.
+The layout is a slicing floorplan and the wiring is basically a maze router,
+both old VLSI ideas. It's also, if I'm honest, a treemap with gaps in it. I
+picked all this up secondhand rather than from the papers, so if you want the
+real thing, the terms to search are "slicing floorplan", "channel routing" and
+"squarified treemap".
 
-Textures are crops of a real die photo by Fritzchens Fritz, released CC0. See
+Textures are crops of a die photo by Fritzchens Fritz, released CC0. See
 `public/textures/CREDITS.md`. Lettering is DIN 1451.
 
 MIT.
