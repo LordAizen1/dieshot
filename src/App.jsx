@@ -83,6 +83,33 @@ export default function App() {
     if (!scan?.imports || !layout) return null;
     const { files, edges } = scan.imports;
     const byPath = new Map(layout.blocks.map((b) => [b.path, b]));
+
+    /*
+     * A file does not always get its own block. Small directories are drawn
+     * solid rather than subdivided, so their contents are never placed, and
+     * looking those paths up returned nothing. Every edge touching one was
+     * quietly thrown away, which is why traces sometimes just were not there.
+     *
+     * Walk up the path instead: shared/types.js lands on the shared block.
+     */
+    const resolve = (p) => {
+      let key = p;
+      for (;;) {
+        const hit = byPath.get(key);
+        if (hit) return hit;
+        const cut = key.lastIndexOf('/');
+        if (cut < 0) return null;
+        key = key.slice(0, cut);
+      }
+    };
+    const memo = new Map();
+    const blockFor = (p) => {
+      if (memo.has(p)) return memo.get(p);
+      const b = resolve(p);
+      memo.set(p, b);
+      return b;
+    };
+
     const out = new Map();
     const inn = new Map();
     const add = (map, key, val) => {
@@ -92,8 +119,8 @@ export default function App() {
     };
     let live = 0;
     for (const [fi, ti] of edges) {
-      const a = byPath.get(files[fi]);
-      const b = byPath.get(files[ti]);
+      const a = blockFor(files[fi]);
+      const b = blockFor(files[ti]);
       if (!a || !b || a === b) continue;
       add(out, a.id, b);
       add(inn, b.id, a);

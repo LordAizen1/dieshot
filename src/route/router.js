@@ -279,7 +279,14 @@ const MAX_PORT_TRIES = 2;
 
 /** Port pairs between two blocks, closest first. */
 function endpointCandidates(a, b) {
-  const fallback = (r) => [{ x: r.x + r.w / 2, y: r.y + r.h / 2, side: 'right' }];
+  // Folders carry no pins, so use the middle of each edge. Centre-of-block
+  // would be buried inside the rectangle with no way out.
+  const fallback = (r) => [
+    { x: r.x, y: r.y + r.h / 2, side: 'left' },
+    { x: r.x + r.w, y: r.y + r.h / 2, side: 'right' },
+    { x: r.x + r.w / 2, y: r.y, side: 'top' },
+    { x: r.x + r.w / 2, y: r.y + r.h, side: 'bottom' },
+  ];
   const ap = a.ports?.length ? a.ports : fallback(a);
   const bp = b.ports?.length ? b.ports : fallback(b);
 

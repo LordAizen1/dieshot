@@ -25,16 +25,16 @@ export default function Traces({ paths, theme, scale }) {
 
   // A trace has physical width, but capped in screen terms so it does not turn
   // into a ribbon at high magnification.
-  const w = Math.min(2.4, 7 / scale);
+  const w = Math.min(1.2, 3.5 / scale);
   const showVias = scale > 0.25;
-  const viaR = Math.min(1.6, 5 / scale);
+  const viaR = Math.min(1.0, 3 / scale);
 
   return (
     <g pointerEvents="none" fill="none" strokeLinejoin="round" strokeLinecap="round">
       {/* Halo: metal catches light, and it lifts the trace off a busy die. */}
-      <g opacity="0.22">
+      <g opacity="0.16">
         {paths.map((p) => (
-          <polyline key={`h${p.key}`} points={toPoints(p.pts)} stroke={p.color} strokeWidth={w * 3.5} />
+          <polyline key={`h${p.key}`} points={toPoints(p.pts)} stroke={p.color} strokeWidth={w * 3} />
         ))}
       </g>
 

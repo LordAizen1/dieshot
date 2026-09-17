@@ -46,7 +46,10 @@ const COST_CELL = 1;    // a bare rect, which is the whole point of cells
 const BLUR_MAX_ELS = 600;
 
 /** Most traces drawn for one block; beyond this it stops being readable. */
-const TRACE_LIMIT = 60;
+const TRACE_LIMIT = 40;
+
+/** Cap on how much of a folder's subtree to walk when rolling up its imports. */
+const SUBTREE_SCAN = 4000;
 
 const LOD_STEPS = [MIN_VISIBLE_PX, 3, 5, 8, 13, 21];
 
@@ -151,7 +154,7 @@ export default function ChipCanvas({
    * and files as you magnify - rather than showing every level at once and
    * leaving the reader to ignore most of it.
    */
-  const { buckets, cellBuckets, closedIds, visibleChannels, deepest } = useMemo(() => {
+  const { buckets, cellBuckets, closedIds, visibleChannels, deepest, drawnIds } = useMemo(() => {
     const blocks = layout.blocks;
     const root = blocks[0];
     const inView = (r) =>
@@ -161,6 +164,7 @@ export default function ChipCanvas({
     let cells = [];
     let closed = new Set();
     let progress = new Map();
+    let drawnIds = new Map();
     let deepest = 0;
 
     for (const minPx of LOD_STEPS) {
@@ -225,6 +229,7 @@ export default function ChipCanvas({
         i++;
       }
 
+      drawnIds = bucketOf;
       if (cost <= NODE_BUDGET) break;
     }
 
@@ -260,7 +265,7 @@ export default function ChipCanvas({
 
     return {
       buckets: outBuckets, cellBuckets: outCells,
-      closedIds: closed, visibleChannels, deepest,
+      closedIds: closed, visibleChannels, deepest, drawnIds,
     };
   }, [layout, vx, vy, vw, vh, lod, showChannels]);
 
@@ -329,35 +334,73 @@ export default function ChipCanvas({
    */
   const router = useMemo(() => createRouter(layout), [layout]);
 
+  const blockIndex = useMemo(
+    () => new Map(layout.blocks.map((b, i) => [b.id, i])),
+    [layout],
+  );
+
+  /**
+   * Traces for whatever is under the cursor.
+   *
+   * Imports are a file-to-file thing, but files only exist as blocks once you
+   * are zoomed well in, so tracing only files meant the feature was invisible
+   * at the view everyone actually starts on. Hovering a FOLDER now rolls up
+   * every import crossing its boundary and draws it against whichever blocks
+   * are currently on screen. Hover src, see what src depends on.
+   */
   const tracePaths = useMemo(() => {
     if (!netlist || !hoverBlock) return [];
 
-    /*
-     * Only route to endpoints that are on screen.
-     *
-     * A dependency three thousand microns away is not something you can look
-     * at, and routing to it costs a search across the whole die. Bounding the
-     * targets to the visible region bounds the work AND keeps the picture
-     * about what is in front of you.
-     */
-    const visible = (t) =>
-      t.x <= vx + vw && t.y <= vy + vh && t.x + t.w >= vx && t.y + t.h >= vy;
+    const blocks = layout.blocks;
+    const i0 = blockIndex.get(hoverBlock.id);
+    if (i0 === undefined) return [];
+    const end = hoverBlock.end ?? i0 + 1;
+
+    // Anything inside the hovered block is internal wiring, not a dependency
+    // of it, so those edges are skipped rather than drawn.
+    const inside = (b) => {
+      const i = blockIndex.get(b.id);
+      return i !== undefined && i >= i0 && i < end;
+    };
+
+    // Walk up to whatever ancestor is actually being drawn right now.
+    const onScreen = (b) => {
+      let cur = b;
+      while (cur && !drawnIds.has(cur.id)) cur = blocks[blockIndex.get(cur.parentId)] ?? null;
+      return cur;
+    };
+
+    const collect = (dir) => {
+      const seen = new Map();
+      let scanned = 0;
+      for (let i = i0; i < end && seen.size < TRACE_LIMIT && scanned < SUBTREE_SCAN; i++) {
+        scanned++;
+        const targets = netlist[dir].get(blocks[i].id);
+        if (!targets) continue;
+        for (const t of targets) {
+          if (inside(t)) continue;                 // internal to what we hover
+          const vis = onScreen(t);
+          if (!vis || vis === hoverBlock || seen.has(vis.id)) continue;
+          if (vis.x > vx + vw || vis.y > vy + vh
+              || vis.x + vis.w < vx || vis.y + vis.h < vy) continue;
+          seen.set(vis.id, vis);
+        }
+      }
+      return [...seen.values()];
+    };
+
     const maxCells = (vw + vh) / 4;
-
-    const out = (netlist.out.get(hoverBlock.id) || []).filter(visible);
-    const inn = (netlist.inn.get(hoverBlock.id) || []).filter(visible);
     const paths = [];
-
     const add = (targets, color, tag) => {
-      for (const t of targets.slice(0, TRACE_LIMIT)) {
+      for (const t of targets) {
         const pts = router.route(hoverBlock, t, { maxCells });
         if (pts && pts.length > 1) paths.push({ key: `${tag}${t.id}`, pts, color });
       }
     };
-    add(out, theme.traceOut, 'o');
-    add(inn, theme.traceIn, 'i');
+    add(collect('out'), theme.traceOut, 'o');
+    add(collect('inn'), theme.traceIn, 'i');
     return paths;
-  }, [netlist, hoverBlock, router, theme, vx, vy, vw, vh]);
+  }, [netlist, hoverBlock, router, theme, vx, vy, vw, vh, layout, blockIndex, drawnIds]);
 
   const handleMove = useCallback((e) => {
     const el = e.target.closest?.('[data-id]');
