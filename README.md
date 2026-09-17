@@ -16,22 +16,30 @@ blocks. A file shows its own; a folder shows everything under it:
 ## Run it
 
 ```bash
-npm install
-npm run dev
+npx dieshot
 ```
 
-That opens a tab. Paste a folder path in the box, hit enter, and it draws it.
-That's the whole thing.
-
-If you'd rather stay in the terminal, `npm run scan -- /some/folder` does the
-same job, and the open tab picks it up on its own.
+Draws whatever folder you're standing in and opens a tab. Give it a path for
+somewhere else: `npx dieshot ./some/folder`. Nothing gets uploaded, it all
+happens on your machine.
 
 Drag to pan, scroll to zoom. `f` fit, `t` theme, `c` channels, `r` traces,
 `h` hides the panel.
 
-Needs Node 20.19+ or 22.12+ (Vite's requirement, not mine). It stops at 50k
-files so you don't accidentally scan your whole drive, and tells you if you hit
-that. Huge folders feel better built: `npm run build && npm run preview`.
+Finding the imports means opening every source file, which is the slow bit, so
+on a big tree it reads a sample and tells you it did. Want the lot, open `more`
+in the panel and flip imports to `all`, or pass `--all-imports`. Either way you
+get a loading screen with a clock on it.
+
+Stops at 50k files so you don't scan your whole drive by accident. Needs Node
+20.19+. `npx dieshot --help` has the other flags.
+
+If you'd rather have the source:
+
+```bash
+git clone https://github.com/LordAizen1/dieshot
+cd dieshot && npm install && npm run dev
+```
 
 ## How it works
 

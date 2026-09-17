@@ -10,8 +10,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { scanDirectory, DEFAULTS } from './walk.js';
-import { collectImports } from './imports.js';
+import { DEFAULTS } from './walk.js';
+import { scanToDie, IMPORT_CAP } from './service.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(HERE, '..');
@@ -32,6 +32,8 @@ function parseArgs(argv) {
       args.options.includeHidden = true;
     } else if (a === '--no-imports') {
       args.noImports = true;
+    } else if (a === '--all-imports') {
+      args.allImports = true;
     } else if (a === '-h' || a === '--help') {
       args.help = true;
     } else if (!a.startsWith('-') && args.dir === null) {
@@ -53,6 +55,7 @@ DIESHOT scanner
       --max-files <n>  file limit   (default ${DEFAULTS.maxFiles})
       --hidden         include dotfiles and dot-directories
       --no-imports     skip dependency extraction (faster scan, no traces)
+      --all-imports    read every source file instead of sampling ${IMPORT_CAP}
 `;
 
 const fmtBytes = (n) => {
@@ -68,16 +71,13 @@ async function main() {
   if (args.help) { console.log(HELP); return; }
 
   const t0 = Date.now();
-  const result = await scanDirectory(args.dir, args.options);
-
-  // The netlist: which file references which. The router draws these as traces.
-  let importMs = 0;
-  if (!args.noImports) {
-    const t1 = Date.now();
-    result.imports = await collectImports(result.meta.root, result.files);
-    importMs = Date.now() - t1;
-  }
-  delete result.files;   // the flat list exists only to build the netlist
+  const result = await scanToDie(args.dir, {
+    ...args.options,
+    imports: !args.noImports,
+    allImports: !!args.allImports,
+  });
+  const importMs = result.timing.importMs;
+  delete result.timing;
 
   await fs.mkdir(path.dirname(args.out), { recursive: true });
   await fs.writeFile(args.out, JSON.stringify(result), 'utf8');
@@ -92,8 +92,14 @@ async function main() {
   console.log(`  skipped  ${meta.ignoredCount}`);
   if (result.imports) {
     const s = result.imports.stats;
-    console.log(`  imports  ${s.edges} edges from ${s.parsed} source files ` +
+    const read = s.capped
+      ? `${s.parsed} of ${s.sourceFiles} source files (sampled)`
+      : `${s.parsed} source files`;
+    console.log(`  imports  ${s.edges} edges from ${read} ` +
                 `(${s.unresolved} unresolved/external, ${importMs}ms)`);
+    if (s.capped) {
+      console.log(`           for every last edge:  --all-imports`);
+    }
   }
   console.log(`  out      ${args.out} (${fmtBytes(outBytes)})`);
   console.log(`  took     ${Date.now() - t0}ms`);

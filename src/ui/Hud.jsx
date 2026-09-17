@@ -33,6 +33,7 @@ export default function Hud({
   meta, layout, theme, onTheme,
   weightMode, onWeightMode, showChannels, onChannels,
   showTraces, onTraces, netlist,
+  importStats, allImports, onAllImports,
   onScan, onFit, busy, error,
   shown, onShown,
 }) {
@@ -124,6 +125,30 @@ export default function Hud({
             />
             <button className="hud-go" type="submit" disabled={busy}>→</button>
           </form>
+
+          {/*
+            Reading source files is the slow half of a scan, so the scanner
+            samples by default. This is the "take your time" switch.
+          */}
+          {meta?.root && (
+            <button
+              className={`hud-more${allImports ? ' on' : ''}`}
+              onClick={() => onAllImports(!allImports)}
+              disabled={busy}
+              title={allImports
+                ? 'reading every source file'
+                : 'sampling source files for imports; click to read all of them'}
+            >
+              <span>imports</span><b>{allImports ? 'all' : 'sampled'}</b>
+            </button>
+          )}
+
+          {importStats?.capped && (
+            <div className="hud-note">
+              read {importStats.parsed.toLocaleString()} of{' '}
+              {importStats.sourceFiles.toLocaleString()} source files
+            </div>
+          )}
 
           <label className="hud-field">
             <span>weight</span>

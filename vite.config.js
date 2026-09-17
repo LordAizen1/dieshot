@@ -1,9 +1,9 @@
 import path from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { scanDirectory } from './scanner/walk.js';
+import { scanToDie } from './scanner/service.js';
 
-const SCAN_TIMEOUT_MS = 30_000;
+const SCAN_TIMEOUT_MS = 180_000;
 
 /**
  * Dev-only endpoint so you can re-floorplan any directory from the UI without
@@ -30,11 +30,12 @@ function scanApi() {
           if (!target) return send(400, { error: 'missing ?path=' });
 
           const maxFiles = Number(url.searchParams.get('maxFiles')) || undefined;
+          const allImports = url.searchParams.get('allImports') === '1';
 
           // The scan itself is not cancellable; the race just stops the browser
           // from hanging if someone points this at a whole drive.
           const result = await Promise.race([
-            scanDirectory(target, { maxFiles }),
+            scanToDie(target, { maxFiles, allImports }),
             new Promise((_, reject) =>
               setTimeout(() => reject(new Error(`scan exceeded ${SCAN_TIMEOUT_MS / 1000}s`)), SCAN_TIMEOUT_MS)),
           ]);

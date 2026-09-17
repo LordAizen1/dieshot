@@ -1,7 +1,6 @@
 {
   "name": "dieshot",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
   "type": "module",
   "description": "Turns a folder into a chip die shot. Lays a repo out with a slicing floorplan and routes its imports through the gaps.",
   "license": "MIT",
@@ -20,6 +19,19 @@
     "dependency-graph",
     "svg"
   ],
+  "bin": {
+    "dieshot": "bin/dieshot.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "shared",
+    "scanner/service.js",
+    "scanner/walk.js",
+    "scanner/imports.js",
+    "scanner/tagger.js",
+    "scanner/scan.js"
+  ],
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
@@ -28,14 +40,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "scan": "node scanner/scan.js",
-    "check": "node scanner/verify.js"
-  },
-  "dependencies": {
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "check": "node scanner/verify.js",
+    "start": "node bin/dieshot.js",
+    "prepublishOnly": "npm run build",
+    "prepack": "node -e \"require('fs').rmSync('dist/die.json',{force:true})\""
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "vite": "^8.3.0"
   }
 }

@@ -5,6 +5,7 @@ import ChipCanvas from './render/ChipCanvas.jsx';
 import Hud from './ui/Hud.jsx';
 import Tooltip from './ui/Tooltip.jsx';
 import Empty from './ui/Empty.jsx';
+import Scanning from './ui/Scanning.jsx';
 import { TECH, MONO } from './render/fonts.js';
 
 export default function App() {
@@ -20,6 +21,11 @@ export default function App() {
 
   const [hover, setHover] = useState(null);
   const [fitSignal, setFitSignal] = useState(0);
+
+  // What the overlay should say, or null for a scan nobody asked to watch
+  // (the boot load). `allImports` is sticky so it survives the next rescan.
+  const [pending, setPending] = useState(null);
+  const [allImports, setAllImports] = useState(false);
 
   const theme = THEMES[themeKey];
 
@@ -57,9 +63,31 @@ export default function App() {
     load('/die.json', 'load die.json', { quiet: true }).catch(() => {});
   }, [load]);
 
+  /**
+   * Reading every source file in a large tree is the slow path, so it is opt
+   * in: by default the scanner samples and says so, and this is how you ask
+   * for the rest. Either way the overlay goes up first, because the uncapped
+   * pass is long enough that an unexplained freeze reads as a crash.
+   */
   const rescan = useCallback(
-    (path) => load(`/api/scan?path=${encodeURIComponent(path)}`, 'scan'),
-    [load],
+    (path, { all = allImports } = {}) => {
+      setAllImports(all);
+      setPending({
+        label: 'scanning',
+        detail: all
+          ? 'reading every source file for imports'
+          : 'walking the tree, sampling imports',
+      });
+      const url = `/api/scan?path=${encodeURIComponent(path)}${all ? '&allImports=1' : ''}`;
+      return load(url, 'scan').finally(() => setPending(null));
+    },
+    [load, allImports],
+  );
+
+  // Re-run the current directory with the import cap lifted, or put back.
+  const onAllImports = useCallback(
+    (next) => { if (scan?.meta?.root) rescan(scan.meta.root, { all: next }); },
+    [rescan, scan],
   );
 
   // Layout is pure and cheap enough to run synchronously on every option change.
@@ -196,6 +224,9 @@ export default function App() {
         showTraces={showTraces}
         onTraces={setShowTraces}
         netlist={netlist}
+        importStats={scan?.imports?.stats}
+        allImports={allImports}
+        onAllImports={onAllImports}
         onScan={rescan}
         onFit={() => setFitSignal((n) => n + 1)}
         busy={busy}
@@ -206,6 +237,10 @@ export default function App() {
 
       {hoverBlock && (
         <Tooltip block={hoverBlock} x={hover.x} y={hover.y} theme={theme} />
+      )}
+
+      {busy && pending && (
+        <Scanning theme={theme} label={pending.label} detail={pending.detail} />
       )}
     </div>
   );

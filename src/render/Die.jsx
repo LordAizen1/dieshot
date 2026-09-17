@@ -11,10 +11,16 @@ import { PAD_RING } from '../layout/constants.js';
  * corners, and process markings written in metal.
  */
 export default function Die({ die, theme, meta, stats, scale, root, view }) {
-  const pitch = 26;
-  const inset = 10;
-  const padLen = 13;
-  const padThick = 6;
+  /*
+   * A bond pad is SQUARE, and it is the same square on all four edges of the
+   * die - the row runs along the edge, the pad itself does not lie down with
+   * it. These used to be 13x6 pills that flipped their long axis per side,
+   * which is lead-frame geometry, not a pad ring.
+   */
+  const pitch = 24;
+  const inset = 9;
+  const PAD = 12;
+  const LIP = 1.8;   // passivation overlapping the metal on each side
 
   const run = (length) => {
     const n = Math.max(0, Math.floor((length - pitch * 2) / pitch));
@@ -35,21 +41,42 @@ export default function Die({ die, theme, meta, stats, scale, root, view }) {
 
   const pads = [];
   if (scale > 0.18) {
+    const sq = (x, y) => ({ x, y, w: PAD, h: PAD });
     for (const x of run(die.w)) {
-      const a = { x: x - padLen / 2, y: inset, w: padLen, h: padThick };
-      const b = { x: x - padLen / 2, y: die.h - inset - padThick, w: padLen, h: padThick };
+      const a = sq(x - PAD / 2, inset);
+      const b = sq(x - PAD / 2, die.h - inset - PAD);
       if (near(a)) pads.push(a);
       if (near(b)) pads.push(b);
     }
     for (const y of run(die.h)) {
-      const a = { x: inset, y: y - padLen / 2, w: padThick, h: padLen };
-      const b = { x: die.w - inset - padThick, y: y - padLen / 2, w: padThick, h: padLen };
+      const a = sq(inset, y - PAD / 2);
+      const b = sq(die.w - inset - PAD, y - PAD / 2);
       if (near(a)) pads.push(a);
       if (near(b)) pads.push(b);
     }
   }
 
   const showOpenings = scale > 0.55;
+  const showProbe = scale > 1.1;
+
+  /*
+   * The scrub a test probe leaves in the aluminium. Every packaged die has
+   * been probed, so every pad carries one, and it is the detail that stops a
+   * pad ring looking like a row of drawn rectangles. Offset is derived from
+   * the index so it is different per pad but identical between frames.
+   */
+  const probe = (p, i) => {
+    const open = PAD - LIP * 2;
+    const w = open * 0.44;
+    const h = open * 0.15;
+    const jx = (((i * 7) % 5) - 2) * (open * 0.07);
+    const jy = (((i * 11) % 5) - 2) * (open * 0.07);
+    return {
+      x: p.x + LIP + (open - w) / 2 + jx,
+      y: p.y + LIP + (open - h) / 2 + jy,
+      w, h,
+    };
+  };
 
   // Vernier alignment ladders: unequal pitch on the two scales is what makes a
   // vernier readable, and it is unmistakably a lithography structure.
@@ -92,17 +119,33 @@ export default function Die({ die, theme, meta, stats, scale, root, view }) {
             fill="none" stroke={theme.seal} strokeWidth="1"
             vectorEffect="non-scaling-stroke" opacity="0.45" />
 
-      {/* Bond pads: metal square with the passivation opening inside it. */}
+      {/*
+        Bond pads. The bright part is the OPENING - the window etched through
+        the passivation down to bare aluminium - and the dull border is the
+        metal still covered by it. This was inside out before: a bright pad
+        with a dark square dropped in the middle, which reads as an empty box
+        rather than as exposed metal.
+      */}
       <g>
         {pads.map((p, i) => (
           <g key={i}>
-            <rect x={p.x} y={p.y} width={p.w} height={p.h} fill={theme.pad} opacity="0.85" rx="0.8" />
-            {showOpenings && (
-              <rect
-                x={p.x + 1.6} y={p.y + 1.6}
-                width={Math.max(0.5, p.w - 3.2)} height={Math.max(0.5, p.h - 3.2)}
-                fill={theme.padOpening} opacity="0.85"
-              />
+            {showOpenings ? (
+              <>
+                <rect x={p.x} y={p.y} width={PAD} height={PAD}
+                      fill={theme.padOpening} opacity="0.9" />
+                <rect x={p.x + LIP} y={p.y + LIP}
+                      width={PAD - LIP * 2} height={PAD - LIP * 2}
+                      fill={theme.pad} opacity="0.92" />
+                {showProbe && (() => {
+                  const m = probe(p, i);
+                  return <rect x={m.x} y={m.y} width={m.w} height={m.h}
+                               fill={theme.padOpening} opacity="0.38" />;
+                })()}
+              </>
+            ) : (
+              // Too small to resolve an opening; one solid square of metal.
+              <rect x={p.x} y={p.y} width={PAD} height={PAD}
+                    fill={theme.pad} opacity="0.8" />
             )}
           </g>
         ))}

@@ -18,6 +18,15 @@ const PY_EXT = new Set(['py']);
 /** Read at most this much of a file; imports live at the top. */
 const HEAD_BYTES = 64 * 1024;
 
+/**
+ * How many source files to actually open, by default.
+ *
+ * Reading is the expensive half of a scan - the walk itself is cheap. On a
+ * 40k-file tree the parse is most of the wait, and past a few thousand edges
+ * you cannot see the difference anyway. Pass maxSources: 0 to read everything.
+ */
+export const IMPORT_CAP = 5000;
+
 const JS_PATTERNS = [
   /\bimport\s+[^;'"]*?\bfrom\s*['"]([^'"]+)['"]/g,   // import x from 'y'
   /\bimport\s*['"]([^'"]+)['"]/g,                     // import 'y'
@@ -136,8 +145,21 @@ function resolvePy(fromPath, spec, idx) {
  * compact than repeating path strings, which matters when a large repo produces
  * tens of thousands of them.
  */
-export async function collectImports(root, files, { concurrency = 48 } = {}) {
-  const sources = files.filter((f) => isSource(f.ext) && f.size <= HEAD_BYTES * 8);
+export async function collectImports(
+  root, files, { concurrency = 48, maxSources = IMPORT_CAP } = {},
+) {
+  const candidates = files.filter((f) => isSource(f.ext) && f.size <= HEAD_BYTES * 8);
+
+  /*
+   * Sample with an even stride rather than taking the first N. Only the
+   * SOURCE of an edge has to be read - the target just has to exist in the
+   * index - so striding still lands edges all over the die. Slicing the first
+   * N instead would wire up whatever sorts early and leave the rest bare.
+   */
+  const cap = maxSources > 0 ? maxSources : Infinity;
+  const step = Math.ceil(candidates.length / cap);
+  const sources = step > 1 ? candidates.filter((_, i) => i % step === 0) : candidates;
+
   const idx = buildIndex(files);
   const indexOf = new Map(files.map((f, i) => [f.path, i]));
 
@@ -192,6 +214,12 @@ export async function collectImports(root, files, { concurrency = 48 } = {}) {
   return {
     files: files.map((f) => f.path),
     edges,
-    stats: { sourceFiles: sources.length, parsed, edges: edges.length, unresolved },
+    stats: {
+      sourceFiles: candidates.length,
+      parsed,
+      edges: edges.length,
+      unresolved,
+      capped: sources.length < candidates.length,
+    },
   };
 }
