@@ -22,7 +22,14 @@ export default function App() {
 
   const theme = THEMES[themeKey];
 
-  const load = useCallback(async (url, label) => {
+  /**
+   * `quiet` is for the boot load. On a fresh clone there is no die.json yet,
+   * and the dev server answers a missing file with index.html rather than a
+   * 404, so the fetch succeeds and JSON.parse chokes on "<!doctype". That is
+   * not an error worth showing someone on their very first run: they just
+   * have not scanned anything yet.
+   */
+  const load = useCallback(async (url, label, { quiet = false } = {}) => {
     setBusy(true);
     setError(null);
     try {
@@ -31,19 +38,22 @@ export default function App() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `${res.status} ${res.statusText}`);
       }
+      if (!res.headers.get('content-type')?.includes('json')) {
+        throw new Error('no scan found');
+      }
       const json = await res.json();
       if (!json?.tree) throw new Error('malformed scan: no tree');
       setScan(json);
       setFitSignal((n) => n + 1);
     } catch (e) {
-      setError(`${label}: ${e.message}`);
+      if (!quiet) setError(`${label}: ${e.message}`);
     } finally {
       setBusy(false);
     }
   }, []);
 
   useEffect(() => {
-    load('/die.json', 'load die.json').catch(() => {});
+    load('/die.json', 'load die.json', { quiet: true }).catch(() => {});
   }, [load]);
 
   const rescan = useCallback(
@@ -148,7 +158,8 @@ export default function App() {
             <>
               <div>NO DIE LOADED</div>
               <div className="empty-hint">
-                run <code>npm run scan -- {'<dir>'}</code>, or type a path above and hit SCAN
+                run <code>npm run scan -- {'<dir>'}</code>
+                <br />or open <code>more</code> in the panel and paste a path
               </div>
             </>
           )}
