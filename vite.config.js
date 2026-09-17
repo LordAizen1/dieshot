@@ -49,5 +49,8 @@ function scanApi() {
 
 export default defineConfig({
   plugins: [react(), scanApi()],
-  server: { port: 5173 },
+  // open: true so `npm run dev` puts the thing on screen instead of printing
+  // a URL and expecting you to go type it in.
+  server: { port: 5173, open: true },
+  preview: { port: 4173, open: true },
 });
