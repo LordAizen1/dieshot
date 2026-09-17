@@ -20,6 +20,8 @@ npm run scan -- /path/to/some/repo
 npm run dev
 ```
 
+Needs Node 20.19+ or 22.12+ (that's Vite's requirement, not mine).
+
 Drag to pan, scroll to zoom. `f` fit, `t` theme, `c` channels, `r` traces,
 `h` hides the panel. There's a box in the panel to rescan a different path.
 
