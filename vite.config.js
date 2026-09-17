@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { scanDirectory } from './scanner/walk.js';
@@ -47,8 +48,29 @@ function scanApi() {
   };
 }
 
+/**
+ * Reload the page when a new scan lands.
+ *
+ * Vite does not watch public/ for this, so re-running `npm run scan` left the
+ * old die on screen until you remembered to refresh. Now the tab just updates.
+ */
+function reloadOnScan() {
+  return {
+    name: 'dieshot-reload-on-scan',
+    apply: 'serve',
+    configureServer(server) {
+      const die = path.resolve('public/die.json');
+      server.watcher.add(die);
+      server.watcher.on('add', (f) => f === die && reload(server));
+      server.watcher.on('change', (f) => f === die && reload(server));
+    },
+  };
+}
+
+const reload = (server) => (server.hot ?? server.ws).send({ type: 'full-reload' });
+
 export default defineConfig({
-  plugins: [react(), scanApi()],
+  plugins: [react(), scanApi(), reloadOnScan()],
   // open: true so `npm run dev` puts the thing on screen instead of printing
   // a URL and expecting you to go type it in.
   server: { port: 5173, open: true },
