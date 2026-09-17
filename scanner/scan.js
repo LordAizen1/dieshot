@@ -89,7 +89,7 @@ async function main() {
   console.log(`  files    ${meta.fileCount}`);
   console.log(`  dirs     ${meta.dirCount}`);
   console.log(`  bytes    ${fmtBytes(meta.totalBytes)}`);
-  console.log(`  skipped  ${meta.ignoredCount}${meta.truncated ? ' (TRUNCATED - raise --max-files)' : ''}`);
+  console.log(`  skipped  ${meta.ignoredCount}`);
   if (result.imports) {
     const s = result.imports.stats;
     console.log(`  imports  ${s.edges} edges from ${s.parsed} source files ` +
@@ -97,6 +97,13 @@ async function main() {
   }
   console.log(`  out      ${args.out} (${fmtBytes(outBytes)})`);
   console.log(`  took     ${Date.now() - t0}ms`);
+
+  if (meta.truncated) {
+    const suggest = Math.ceil((meta.fileCount + meta.ignoredCount) / 10000) * 10000;
+    console.log('');
+    console.log(`  NOTE  stopped at ${meta.options.maxFiles} files, so this die is incomplete.`);
+    console.log(`        for the whole thing:  npm run scan -- "${args.dir}" --max-files ${suggest}`);
+  }
 }
 
 main().catch((err) => {

@@ -63,6 +63,13 @@ export default function Hud({
 
       {error && <div className="hud-error">{error}</div>}
 
+      {/* A truncated scan looks like a complete die unless you say otherwise. */}
+      {meta?.truncated && (
+        <div className="hud-note">
+          partial scan, stopped at {meta.options?.maxFiles} files
+        </div>
+      )}
+
       {s && (
         <div className="hud-stats">
           <Stat k="files" v={meta?.fileCount ?? s.files} />

@@ -273,6 +273,15 @@ body {
   word-break: break-word;
 }
 
+.hud-note {
+  padding: 6px 10px;
+  font-family: var(--tech);
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  color: #ffc46b;
+  background: #ffa50014;
+}
+
 .hud-legend {
   display: flex;
   flex-wrap: wrap;

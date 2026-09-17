@@ -21,7 +21,7 @@ export const IGNORE_FILES = new Set([
 
 export const DEFAULTS = {
   maxDepth: 14,
-  maxFiles: 25000,
+  maxFiles: 50000,
   includeHidden: false,
 };
 
