@@ -1,0 +1,38 @@
+{
+  "name": "dieshot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Turns a folder into a chip die shot. Lays a repo out with a slicing floorplan and routes its imports through the gaps.",
+  "license": "MIT",
+  "author": "Md Kaif",
+  "homepage": "https://github.com/LordAizen1/dieshot#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LordAizen1/dieshot.git"
+  },
+  "keywords": [
+    "visualization",
+    "floorplan",
+    "vlsi",
+    "treemap",
+    "codebase",
+    "dependency-graph",
+    "svg"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "scan": "node scanner/scan.js",
+    "check": "node scanner/verify.js"
+  },
+  "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.3.0"
+  }
+}

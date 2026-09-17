@@ -1,0 +1,5 @@
+# Keep line endings consistent for anyone cloning on another OS.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary

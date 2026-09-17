@@ -1,0 +1,53 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { scanDirectory } from './scanner/walk.js';
+
+const SCAN_TIMEOUT_MS = 30_000;
+
+/**
+ * Dev-only endpoint so you can re-floorplan any directory from the UI without
+ * restarting anything: GET /api/scan?path=E:\some\repo
+ *
+ * This is a local tool - it reads whatever local path you hand it, exactly like
+ * the CLI does. It is not registered for `vite build`.
+ */
+function scanApi() {
+  return {
+    name: 'dieshot-scan-api',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/api/scan', async (req, res) => {
+        const send = (code, body) => {
+          res.statusCode = code;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(body));
+        };
+
+        try {
+          const url = new URL(req.url, 'http://localhost');
+          const target = url.searchParams.get('path');
+          if (!target) return send(400, { error: 'missing ?path=' });
+
+          const maxFiles = Number(url.searchParams.get('maxFiles')) || undefined;
+
+          // The scan itself is not cancellable; the race just stops the browser
+          // from hanging if someone points this at a whole drive.
+          const result = await Promise.race([
+            scanDirectory(target, { maxFiles }),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error(`scan exceeded ${SCAN_TIMEOUT_MS / 1000}s`)), SCAN_TIMEOUT_MS)),
+          ]);
+
+          send(200, result);
+        } catch (err) {
+          send(500, { error: err.message });
+        }
+      });
+    },
+  };
+}
+
+export default defineConfig({
+  plugins: [react(), scanApi()],
+  server: { port: 5173 },
+});
