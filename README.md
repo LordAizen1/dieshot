@@ -8,7 +8,8 @@ Code visualizers always give you that same blob of dots and lines. Folders
 aren't blobs though, they're boxes inside boxes, same as chips. So I borrowed
 the chip layout algorithm.
 
-Hover a file and it wires up its imports through the gaps between blocks:
+Hover anything and it wires up the imports, routed through the gaps between
+blocks. A file shows its own; a folder shows everything under it:
 
 ![traces routed between blocks](dieshot-traces.jpg)
 
