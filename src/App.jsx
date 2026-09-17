@@ -4,6 +4,7 @@ import { THEMES, THEME_KEYS } from './render/theme.js';
 import ChipCanvas from './render/ChipCanvas.jsx';
 import Hud from './ui/Hud.jsx';
 import Tooltip from './ui/Tooltip.jsx';
+import Empty from './ui/Empty.jsx';
 import { TECH, MONO } from './render/fonts.js';
 
 export default function App() {
@@ -153,17 +154,7 @@ export default function App() {
           fitSignal={fitSignal}
         />
       ) : (
-        <div className="empty" style={{ color: theme.dim, background: theme.page }}>
-          {busy ? 'SCANNING…' : (
-            <>
-              <div>NO DIE LOADED</div>
-              <div className="empty-hint">
-                run <code>npm run scan -- {'<dir>'}</code>
-                <br />or open <code>more</code> in the panel and paste a path
-              </div>
-            </>
-          )}
-        </div>
+        <Empty theme={theme} busy={busy} onScan={rescan} />
       )}
 
       <Hud

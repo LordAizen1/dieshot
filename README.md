@@ -16,24 +16,21 @@ Hover a file and it wires up its imports through the gaps between blocks:
 
 ```bash
 npm install
-npm run scan -- /path/to/some/repo
 npm run dev
 ```
 
-Needs Node 20.19+ or 22.12+ (that's Vite's requirement, not mine).
+That opens a tab. Paste a folder path in the box, hit enter, and it draws it.
+That's the whole thing.
 
-It stops at 50k files so you don't accidentally scan your whole drive. If you
-hit that it'll tell you, and you bump it with `--max-files`.
-
-That opens a browser tab for you. Leave it running and re-run the scan on
-anything else, the tab picks it up on its own. There's also a box in the panel
-if you'd rather not go back to the terminal.
+If you'd rather stay in the terminal, `npm run scan -- /some/folder` does the
+same job, and the open tab picks it up on its own.
 
 Drag to pan, scroll to zoom. `f` fit, `t` theme, `c` channels, `r` traces,
 `h` hides the panel.
 
-Huge folders are slow in dev mode because React renders everything twice. Use
-`npm run build && npm run preview` for those.
+Needs Node 20.19+ or 22.12+ (Vite's requirement, not mine). It stops at 50k
+files so you don't accidentally scan your whole drive, and tells you if you hit
+that. Huge folders feel better built: `npm run build && npm run preview`.
 
 ## How it works
 
