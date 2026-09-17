@@ -2,27 +2,37 @@ import { PIN_LENGTH } from '../layout/constants.js';
 import { fitLabel } from './text.js';
 import { variantOf } from './color.js';
 
-const PIN_W = 2.5;   // lead width; stays well inside the narrowest channel
-const PAD_LONG = 3.2;
+const PIN_W = 2.5;      // lead width; stays well inside the narrowest channel
+const PAD_LONG = 3.2;   // world-space ceiling, reached once you are zoomed out
 const PAD_SHORT = 2.2;
 
-/** Contact pad sitting just inside the block edge, centred on its port. */
-function pad(b, p) {
+/*
+ * Contacts are screen-capped, like every other annotation here. Sized purely
+ * in world units they grow with the magnification, so a 3um pad turned into a
+ * 26px rounded slab at 8x - by far the loudest thing on a die that is
+ * otherwise all texture. A contact should stay a contact at every zoom.
+ */
+const PAD_PX = 4.5;
+const LEAD_PX = 7;
+
+/** Contact pad, flush with the block edge and centred on its port. */
+function pad(b, p, long, short) {
+  const half = long / 2;
   switch (p.side) {
-    case 'left':   return { x: b.x + 0.8, y: p.y - PAD_LONG / 2, w: PAD_SHORT, h: PAD_LONG };
-    case 'right':  return { x: b.x + b.w - 0.8 - PAD_SHORT, y: p.y - PAD_LONG / 2, w: PAD_SHORT, h: PAD_LONG };
-    case 'top':    return { x: p.x - PAD_LONG / 2, y: b.y + 0.8, w: PAD_LONG, h: PAD_SHORT };
-    default:       return { x: p.x - PAD_LONG / 2, y: b.y + b.h - 0.8 - PAD_SHORT, w: PAD_LONG, h: PAD_SHORT };
+    case 'left':   return { x: b.x,               y: p.y - half, w: short, h: long };
+    case 'right':  return { x: b.x + b.w - short, y: p.y - half, w: short, h: long };
+    case 'top':    return { x: p.x - half, y: b.y,               w: long, h: short };
+    default:       return { x: p.x - half, y: b.y + b.h - short, w: long, h: short };
   }
 }
 
 /** Lead-frame geometry: a real package has rectangular pins, not hairlines. */
-function lead(p) {
+function lead(p, len, w) {
   switch (p.side) {
-    case 'left':   return { x: p.x - PIN_LENGTH, y: p.y - PIN_W / 2, w: PIN_LENGTH, h: PIN_W };
-    case 'right':  return { x: p.x,              y: p.y - PIN_W / 2, w: PIN_LENGTH, h: PIN_W };
-    case 'top':    return { x: p.x - PIN_W / 2,  y: p.y - PIN_LENGTH, w: PIN_W, h: PIN_LENGTH };
-    default:       return { x: p.x - PIN_W / 2,  y: p.y,              w: PIN_W, h: PIN_LENGTH };
+    case 'left':   return { x: p.x - len,   y: p.y - w / 2, w: len, h: w };
+    case 'right':  return { x: p.x,         y: p.y - w / 2, w: len, h: w };
+    case 'top':    return { x: p.x - w / 2, y: p.y - len,   w, h: len };
+    default:       return { x: p.x - w / 2, y: p.y,         w, h: len };
   }
 }
 
@@ -59,12 +69,19 @@ export default function ICBlock({ b, theme, scale }) {
   const cx = b.x + b.w / 2;
   const cy = b.y + b.h / 2;
 
+  const padLong = Math.min(PAD_LONG, PAD_PX / scale);
+  const padShort = Math.min(PAD_SHORT, (PAD_PX * 0.68) / scale);
+  const leadLen = Math.min(PIN_LENGTH, LEAD_PX / scale);
+  const leadW = Math.min(PIN_W, (LEAD_PX * 0.5) / scale);
+  const dotR = Math.min(1.6, 3.5 / scale);
+  const dotIn = Math.min(4.5, 7 / scale);
+
   return (
     <g data-id={b.id}>
       {showPins && (
         <g fill={theme.ic.pin} opacity="0.9">
           {b.ports.map((p, i) => {
-            const r = lead(p);
+            const r = lead(p, leadLen, leadW);
             return <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} />;
           })}
         </g>
@@ -97,7 +114,7 @@ export default function ICBlock({ b, theme, scale }) {
       )}
 
       {showPin1 && (
-        <circle cx={b.x + 4.5} cy={b.y + 4.5} r="1.6" fill={theme.ic.pin1} opacity="0.9" />
+        <circle cx={b.x + dotIn} cy={b.y + dotIn} r={dotR} fill={theme.ic.pin1} opacity="0.9" />
       )}
 
       {/*
@@ -106,10 +123,10 @@ export default function ICBlock({ b, theme, scale }) {
         filled rectangle, and they sit exactly where the router attaches.
       */}
       {showPads && (
-        <g fill={theme.ic.pad} opacity="0.75">
+        <g fill={theme.ic.pad} opacity="0.6">
           {b.ports.map((p, i) => {
-            const r = pad(b, p);
-            return <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} rx="0.5" />;
+            const r = pad(b, p, padLong, padShort);
+            return <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} />;
           })}
         </g>
       )}
