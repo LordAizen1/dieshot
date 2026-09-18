@@ -1,5 +1,7 @@
 # dieshot
 
+[![npm](https://img.shields.io/npm/v/dieshot)](https://www.npmjs.com/package/dieshot)
+
 Draws a folder like a chip die.
 
 ![a repo drawn as a die](dieshot-screenshot.jpg)
@@ -33,6 +35,8 @@ get a loading screen with a clock on it.
 
 Stops at 50k files so you don't scan your whole drive by accident. Needs Node
 20.19+. `npx dieshot --help` has the other flags.
+
+Using it a lot? `npm i -g dieshot` and then it's just `dieshot`.
 
 If you'd rather have the source:
 
