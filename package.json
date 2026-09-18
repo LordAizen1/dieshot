@@ -1,6 +1,6 @@
 {
   "name": "dieshot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "Turns a folder into a chip die shot. Lays a repo out with a slicing floorplan and routes its imports through the gaps.",
   "license": "MIT",
