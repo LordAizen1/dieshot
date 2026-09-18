@@ -1,21 +1,14 @@
 import { CHANNEL, PIN_LENGTH } from '../layout/constants.js';
 import { fitLabel } from './text.js';
+import { variantOf } from './color.js';
+
+const cap = (world, px) => `min(${world}px, calc(${px}px / var(--s, 1)))`;
+const shrink = (ratio) => `scale(min(1, calc(${ratio} / var(--s, 1))))`;
 
 /**
- * A file on the board theme: a packaged chip.
- *
- * It used to be the die-theme block with a few extras bolted on - a green
- * photo texture, an outline, two to four stubby leads wherever a routing port
- * happened to be, an inner "cavity" rectangle and a big orange dot. Nothing
- * about that says "part soldered to a board". What does:
- *
- *   - a black epoxy body, lit slightly from above, casting a shadow
- *   - a full row of leads at a fixed pitch on the sides the package style
- *     has pins on, each landing on its own gold pad
- *   - grey laser marking on top rather than a printed label
- *   - a pin-1 dimple, and on a DIP the half-moon notch at one end
- *
- * The leads are decoration, and deliberately independent of the routing
+ * A file on the board theme: the textured body in the theme's own colours,
+ * with a full row of leads at a fixed pitch on the package's pin sides, each
+ * on its own pad. The leads are decoration and independent of the routing
  * ports: a real 14-pin DIP does not have 3 pins because 3 traces reach it.
  */
 
@@ -80,13 +73,6 @@ function leadRow(b, pkg, side, L) {
   return { leads, pads };
 }
 
-const fmtBytes = (n) => {
-  if (!n) return '';
-  if (n < 1024) return `${n}B`;
-  if (n < 1024 * 1024) return `${Math.round(n / 1024)}K`;
-  return `${(n / 1024 / 1024).toFixed(1)}M`;
-};
-
 export default function Package({ b, theme, scale }) {
   const ic = theme.ic;
   const minSide = Math.min(b.w, b.h);
@@ -103,39 +89,17 @@ export default function Package({ b, theme, scale }) {
   const L = Math.max(0.6, Math.min(PIN_LENGTH, gap / 2 - 0.4));
 
   const showLeads = minPx > 18;
-  const showMarks = minPx > 26;
   const rows = showLeads ? sidesFor(pkg, b).map((s) => leadRow(b, pkg, s, L)) : [];
 
+  const family = theme.families[b.family] ? b.family : 'misc';
   const label = minPx > 12 && maxPx > 40
-    ? fitLabel(b.name, b.w * 0.9, b.h * 0.9, { maxFont: 13 / scale })
+    ? fitLabel(b.name, b.w, b.h, { maxFont: 15 / scale })
     : null;
-  const sub = label && !label.vertical && minPx > 64
-    ? `${(b.ext || '').toUpperCase()} ${fmtBytes(b.bytes)}`.trim()
-    : '';
-
   const cx = b.x + b.w / 2;
   const cy = b.y + b.h / 2;
-  const inset = Math.min(2.4, minSide * 0.2);
-  const dimple = Math.min(1.1, minSide * 0.1);
-
-  // DIP notch: a half-moon cut into the end that has no pins. Pin 1 is the
-  // corner just counter-clockwise of it, which is where the dimple goes.
-  const notchR = Math.min(1.6, minSide * 0.16);
-  const wide = b.w >= b.h;
-  const notch = pkg === 'DIP' && showMarks
-    ? (wide
-      ? `M${f(b.x)} ${f(cy - notchR)}a${f(notchR)} ${f(notchR)} 0 0 1 0 ${f(notchR * 2)}z`
-      : `M${f(cx - notchR)} ${f(b.y)}a${f(notchR)} ${f(notchR)} 0 0 0 ${f(notchR * 2)} 0z`)
-    : null;
-  const dot = wide
-    ? { x: b.x + inset + dimple, y: b.y + b.h - inset - dimple }
-    : { x: b.x + inset + dimple, y: b.y + inset + dimple };
 
   return (
     <g data-id={b.id}>
-      {/* Shadow on the board, offset away from the light. */}
-      <rect x={b.x + 0.5} y={b.y + 0.8} width={b.w} height={b.h} fill="#000" opacity="0.45" />
-
       {rows.length > 0 && (
         <g>
           <path d={rows.map((r) => r.pads).join('')} fill={ic.pad} opacity="0.8" />
@@ -143,31 +107,36 @@ export default function Package({ b, theme, scale }) {
         </g>
       )}
 
-      <rect x={b.x} y={b.y} width={b.w} height={b.h} fill={ic.body}
-            stroke="#000" strokeOpacity="0.7" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-      <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="url(#pkg-sheen)" pointerEvents="none" />
+      <rect
+        x={b.x} y={b.y} width={b.w} height={b.h}
+        fill={`url(#pat-fam-${family}-${variantOf(b.path)})`}
+        stroke={ic.edge} strokeWidth="1" strokeOpacity="0.7" vectorEffect="non-scaling-stroke"
+      />
 
-      {notch && <path d={notch} fill={theme.page} opacity="0.9" />}
-      {showMarks && (
-        <circle cx={dot.x} cy={dot.y} r={dimple}
-                fill="#000" opacity="0.55" stroke={ic.bodyHi} strokeWidth="1"
-                vectorEffect="non-scaling-stroke" strokeOpacity="0.6" />
+      {/* Die cavity outline inside the package body. */}
+      {minPx > 44 && (
+        <rect
+          x={b.x + 4} y={b.y + 4} width={b.w - 8} height={b.h - 8}
+          fill="none" stroke={ic.edge} style={{ strokeWidth: cap(0.6, 2) }} opacity="0.22"
+        />
+      )}
+
+      {minPx > 26 && (
+        <circle cx={b.x + 4.5} cy={b.y + 4.5} r={2.25} fill={ic.pin1} opacity="0.9"
+                style={{ transform: shrink(7 / 4.5), transformOrigin: `${b.x}px ${b.y}px` }} />
       )}
 
       {label && (
-        <g transform={label.vertical ? `rotate(-90 ${cx} ${cy})` : undefined}
-           fontFamily="var(--mono)" textAnchor="middle" fill={ic.mark}>
-          <text x={cx} y={cy} dy={sub ? '-0.25em' : undefined} dominantBaseline="central"
-                style={{ fontSize: `min(${label.fontSize}px, calc(13px / var(--s, 1)))`, letterSpacing: '0.04em' }}>
-            {label.text}
-          </text>
-          {sub && (
-            <text x={cx} y={cy} dy="1.5em" dominantBaseline="central" opacity="0.7"
-                  style={{ fontSize: `min(${label.fontSize * 0.62}px, calc(8px / var(--s, 1)))`, letterSpacing: '0.12em' }}>
-              {sub}
-            </text>
-          )}
-        </g>
+        <text
+          x={cx} y={cy} dominantBaseline="central"
+          transform={label.vertical ? `rotate(-90 ${cx} ${cy})` : undefined}
+          fill={ic.label} textAnchor="middle"
+          fontFamily="var(--tech)" fontWeight="500" opacity="0.92"
+          style={{ fontSize: cap(label.fontSize, 15), strokeWidth: '0.2em' }}
+          stroke={theme.textHalo} strokeLinejoin="round" paintOrder="stroke"
+        >
+          {label.text}
+        </text>
       )}
     </g>
   );

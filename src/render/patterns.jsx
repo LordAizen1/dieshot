@@ -171,12 +171,6 @@ export default function Patterns({ theme }) {
 
       {microDefs(theme)}
 
-      {/* Moulded package top: a touch of light from above, darker toward the board. */}
-      <linearGradient id="pkg-sheen" x1="0" y1="0" x2="0.35" y2="1">
-        <stop offset="0%" stopColor="#ffffff" stopOpacity="0.09" />
-        <stop offset="45%" stopColor="#ffffff" stopOpacity="0.02" />
-        <stop offset="100%" stopColor="#000000" stopOpacity="0.25" />
-      </linearGradient>
 
       {/* Uneven illumination - a die photo is never lit flat. */}
       <radialGradient id="die-light" cx="38%" cy="28%" r="78%">

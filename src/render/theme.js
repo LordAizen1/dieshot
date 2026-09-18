@@ -105,8 +105,7 @@ const PCB = {
   },
   ic: {
     edge: '#d9a441', pin: '#f0cf84', label: '#f2e6c8', pin1: '#ff8a5b', pad: '#d7b25a',
-    // Packaged parts: black epoxy, tinned leads, grey laser marking.
-    body: '#141615', bodyHi: '#3a3e3b', lead: '#c3c7c1', mark: '#9ea39c',
+    lead: '#c3c7c1',   // tinned package leads
   },
   traceOut: '#ffe9a8',
   traceIn: '#8fe3b0',
