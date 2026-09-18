@@ -8,6 +8,23 @@ import Empty from './ui/Empty.jsx';
 import Scanning from './ui/Scanning.jsx';
 import { TECH, MONO } from './render/fonts.js';
 
+/*
+ * A small folder scans in about a tenth of a second, so the loading screen
+ * came and went in three or four frames - a blink, before the beam had even
+ * faded in. Once it is up it now stays long enough for one sweep to read.
+ */
+const MIN_OVERLAY_MS = 900;
+
+/*
+ * The boot load only gets the overlay if it is actually slow. Under
+ * `npx dieshot` the server is still scanning when the tab opens, so
+ * /die.json takes as long as the scan does; in dev it answers at once and
+ * the screen should not flash.
+ */
+const BOOT_OVERLAY_DELAY_MS = 150;
+
+const SAMPLED = 'walking the tree, sampling imports';
+
 export default function App() {
   const [scan, setScan] = useState(null);
   const [busy, setBusy] = useState(true);
@@ -26,6 +43,21 @@ export default function App() {
   // (the boot load). `allImports` is sticky so it survives the next rescan.
   const [pending, setPending] = useState(null);
   const [allImports, setAllImports] = useState(false);
+
+  // `overlayRun` stamps each overlay, so a hide timer left over from one scan
+  // can never take down the overlay of the next.
+  const overlayAt = useRef(0);
+  const overlayRun = useRef(0);
+  const showOverlay = useCallback((info) => {
+    overlayAt.current = performance.now();
+    setPending(info);
+    return ++overlayRun.current;
+  }, []);
+  const hideOverlay = useCallback((run) => {
+    const left = MIN_OVERLAY_MS - (performance.now() - overlayAt.current);
+    const hide = () => { if (overlayRun.current === run) setPending(null); };
+    if (left > 0) setTimeout(hide, left); else hide();
+  }, []);
 
   const theme = THEMES[themeKey];
 
@@ -60,8 +92,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    load('/die.json', 'load die.json', { quiet: true }).catch(() => {});
-  }, [load]);
+    let run = null;
+    const slow = setTimeout(() => {
+      run = showOverlay({ label: 'scanning', detail: SAMPLED });
+    }, BOOT_OVERLAY_DELAY_MS);
+    const settle = () => { clearTimeout(slow); if (run) hideOverlay(run); };
+    load('/die.json', 'load die.json', { quiet: true }).catch(() => {}).finally(settle);
+    return settle;
+  }, [load, showOverlay, hideOverlay]);
 
   /**
    * Reading every source file in a large tree is the slow path, so it is opt
@@ -72,16 +110,14 @@ export default function App() {
   const rescan = useCallback(
     (path, { all = allImports } = {}) => {
       setAllImports(all);
-      setPending({
+      const run = showOverlay({
         label: 'scanning',
-        detail: all
-          ? 'reading every source file for imports'
-          : 'walking the tree, sampling imports',
+        detail: all ? 'reading every source file for imports' : SAMPLED,
       });
       const url = `/api/scan?path=${encodeURIComponent(path)}${all ? '&allImports=1' : ''}`;
-      return load(url, 'scan').finally(() => setPending(null));
+      return load(url, 'scan').finally(() => hideOverlay(run));
     },
-    [load, allImports],
+    [load, allImports, showOverlay, hideOverlay],
   );
 
   // Re-run the current directory with the import cap lifted, or put back.
@@ -239,7 +275,7 @@ export default function App() {
         <Tooltip block={hoverBlock} x={hover.x} y={hover.y} theme={theme} />
       )}
 
-      {busy && pending && (
+      {pending && (
         <Scanning theme={theme} label={pending.label} detail={pending.detail} />
       )}
     </div>

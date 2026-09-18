@@ -178,9 +178,9 @@ body {
   box-shadow: 0 0 10px 2px currentColor;
   animation: scan-sweep 1.5s cubic-bezier(0.6, 0, 0.4, 1) infinite;
 }
+/* Visible from the very first frame: a short scan is only a few frames long. */
 @keyframes scan-sweep {
-  0%   { top: -2px;  opacity: 0; }
-  12%  { opacity: 1; }
+  0%   { top: -2px;  opacity: 1; }
   88%  { opacity: 1; }
   100% { top: 100%;  opacity: 0; }
 }

@@ -176,18 +176,32 @@ async function main() {
 
   console.log(`\n  scanning ${args.dir}`);
   const t0 = Date.now();
-  let die = await scanToDie(args.dir, args.options);
-  delete die.timing;
-  report(die, Date.now() - t0);
+  /*
+   * The tab opens BEFORE the scan finishes, and /die.json waits on it. Doing
+   * it the other way round meant a big folder sat in the terminal with no tab
+   * at all, and a small one never showed the loading screen, because by the
+   * time the page existed there was nothing left to wait for.
+   */
+  let die = scanToDie(args.dir, args.options).then((d) => {
+    delete d.timing;
+    report(d, Date.now() - t0);
+    return d;
+  });
+  die.catch((err) => {
+    console.error(`dieshot: scan failed: ${err.message}`);
+    process.exit(1);
+  });
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
 
     if (url.pathname === '/die.json') {
+      let body;
+      try { body = JSON.stringify(await die); } catch { res.statusCode = 500; return res.end(); }
       res.statusCode = 200;
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store');
-      return res.end(JSON.stringify(die));
+      return res.end(body);
     }
 
     // Same endpoint the dev server has, so the path box and the imports
@@ -205,7 +219,7 @@ async function main() {
           allImports: url.searchParams.get('allImports') === '1',
         });
         delete next.timing;
-        die = next;                     // so a reload shows what you last asked for
+        die = Promise.resolve(next);    // so a reload shows what you last asked for
         res.statusCode = 200;
         res.end(JSON.stringify(next));
       } catch (err) {
