@@ -1,6 +1,7 @@
 import { PIN_LENGTH } from '../layout/constants.js';
 import { fitLabel } from './text.js';
 import { variantOf } from './color.js';
+import Package from './Package.jsx';
 import { STRUCTURE, VARIANTS, FADE_AT, detailOpacity, mix } from './micro.jsx';
 
 const PAD_LONG = 3.2;   // world-space ceiling, reached once you are zoomed out
@@ -134,6 +135,8 @@ function microstructure(b, family, theme) {
  * rectangle is a diagram convention and reads as one instantly.
  */
 export default function ICBlock({ b, theme, scale }) {
+  if (theme.packaged && !b.synthetic) return <Package b={b} theme={theme} scale={scale} />;
+
   const family = theme.families[b.family] ? b.family : 'misc';
   const body = `url(#pat-fam-${family}-${variantOf(b.path)})`;
   const packaged = !!theme.packaged;

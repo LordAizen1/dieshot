@@ -103,7 +103,11 @@ const PCB = {
     asset:  '#0f2c21',
     misc:   '#0d2418',
   },
-  ic: { edge: '#d9a441', pin: '#f0cf84', label: '#f2e6c8', pin1: '#ff8a5b', pad: '#f0cf84' },
+  ic: {
+    edge: '#d9a441', pin: '#f0cf84', label: '#f2e6c8', pin1: '#ff8a5b', pad: '#d7b25a',
+    // Packaged parts: black epoxy, tinned leads, grey laser marking.
+    body: '#141615', bodyHi: '#3a3e3b', lead: '#c3c7c1', mark: '#9ea39c',
+  },
   traceOut: '#ffe9a8',
   traceIn: '#8fe3b0',
 };

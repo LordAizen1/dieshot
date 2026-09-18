@@ -478,11 +478,14 @@ export default function ChipCanvas({
             it is physically: the last metal layer runs over everything, and the
             way it crosses block boundaries unbroken is what makes a die photo
             read as one piece of silicon rather than a stack of rectangles.
+            Not on a board: there it would be painted across the chip tops.
           */}
-          <rect
-            {...core} fill="url(#pat-power)"
-            opacity={showChannels ? 0.07 : 0.19} pointerEvents="none"
-          />
+          {!theme.packaged && (
+            <rect
+              {...core} fill="url(#pat-power)"
+              opacity={showChannels ? 0.07 : 0.19} pointerEvents="none"
+            />
+          )}
 
           {/* Uneven illumination, the last thing between you and a photograph. */}
           <rect
