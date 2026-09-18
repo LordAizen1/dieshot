@@ -49,8 +49,8 @@ function leadRow(b, pkg, side, L) {
   const horiz = side === 'top' || side === 'bottom';
   const len = horiz ? b.w : b.h;
   const pitch = pkg === 'SOT' ? Math.min(len * 0.3, 3) : (PITCH[pkg] ?? PITCH.SOIC);
-  const lw = pitch * 0.42;
-  const pw = pitch * 0.62;
+  const lw = pitch * 0.24;
+  const pw = pitch * 0.4;
   let leads = '';
   let pads = '';
   for (const t of positions(pkg, side, len)) {
