@@ -1,6 +1,7 @@
 import { PIN_LENGTH } from '../layout/constants.js';
 import { fitLabel } from './text.js';
 import { variantOf } from './color.js';
+import { STRUCTURE, VARIANTS, FADE_AT, detailOpacity, mix } from './micro.jsx';
 
 const PAD_LONG = 3.2;   // world-space ceiling, reached once you are zoomed out
 const PAD_SHORT = 2.2;
@@ -52,6 +53,75 @@ function lead(p, len, w) {
 }
 
 /**
+ * The inside of a file, by what kind of circuit it is. See micro.jsx.
+ *
+ * Memory is the one with an anatomy: the array itself, a row decoder down one
+ * side and sense amps along the bottom, which are ordinary logic. Those edge
+ * strips are what make a real SRAM macro recognisable at a glance.
+ */
+function microstructure(b, family, theme) {
+  const kind = STRUCTURE[family] || 'std';
+  const minSide = Math.min(b.w, b.h);
+  const at = (k, stage) => ({ opacity: detailOpacity(minSide, FADE_AT[k][stage]) });
+  const coarse = at(kind, 'coarse');
+  const fine = at(kind, 'fine');
+  const v = variantOf(b.path, VARIANTS);
+
+  const layer = (r, id, style, key) => (
+    <rect key={key} x={r.x} y={r.y} width={r.w} height={r.h}
+          fill={`url(#${id})`} style={style} pointerEvents="none" />
+  );
+  // Logic keeps its own fade points even inside a memory's decoder strip.
+  const logic = (r, key) => [
+    layer(r, `ic-std-coarse-${v}`, at('std', 'coarse'), `${key}c`),
+    layer(r, `ic-std-fine-${v}`, at('std', 'fine'), `${key}f`),
+  ];
+
+  const whole = { x: b.x, y: b.y, w: b.w, h: b.h };
+
+  /*
+   * The die photo underneath is a 120-unit tile; by the time gates resolve it
+   * is magnified so far that it is only soft smears, which fight the crisp
+   * structure on top. A flat wash in the block's own mid-tone settles it,
+   * coming in with the fine detail so the zoomed-out look is untouched.
+   */
+  const [lo, hi] = theme.families[family]?.ramps?.[v] ?? ['#000000', '#000000'];
+  const wash = (
+    <rect key="w" x={b.x} y={b.y} width={b.w} height={b.h} fill={mix(lo, hi, 0.5)}
+          style={{ opacity: `calc(${detailOpacity(minSide, FADE_AT.std.fine)} * 0.6)` }} pointerEvents="none" />
+  );
+
+  if (kind === 'std') return <g>{wash}{logic(whole, 's')}</g>;
+
+  if (kind === 'analog') {
+    return (
+      <g>
+        {wash}
+        {layer(whole, 'ic-analog-coarse', coarse, 'c')}
+        {layer(whole, 'ic-analog-fine', fine, 'f')}
+        <rect x={b.x + 0.6} y={b.y + 0.6} width={b.w - 1.2} height={b.h - 1.2}
+              fill="none" stroke={theme.guard} style={{ ...coarse, strokeWidth: cap(0.4, 1.5) }}
+              pointerEvents="none" />
+      </g>
+    );
+  }
+
+  // SRAM: decoder on the left, sense amps along the bottom, array in between.
+  const dec = Math.max(1.2, Math.min(b.w * 0.14, 8));
+  const sense = Math.max(1.2, Math.min(b.h * 0.14, 6));
+  const array = { x: b.x + dec, y: b.y, w: b.w - dec, h: b.h - sense };
+  return (
+    <g>
+      {wash}
+      {logic({ x: b.x, y: b.y, w: dec, h: b.h }, 'd')}
+      {logic({ x: b.x + dec, y: b.y + b.h - sense, w: b.w - dec, h: sense }, 'a')}
+      {layer(array, 'ic-sram-coarse', coarse, 'mc')}
+      {layer(array, 'ic-sram-fine', fine, 'mf')}
+    </g>
+  );
+}
+
+/**
  * A file.
  *
  * What it looks like follows the medium, because the metaphor has to. On a
@@ -83,6 +153,10 @@ export default function ICBlock({ b, theme, scale }) {
     : null;
   const cx = b.x + b.w / 2;
   const cy = b.y + b.h / 2;
+
+  // Die themes only: a board draws packages, and a package is opaque.
+  const showMicro = !packaged && !b.synthetic && minPx > 70;
+  const micro = showMicro ? microstructure(b, family, theme) : null;
 
   // Drawn at their world ceiling and shrunk about the port, so they stay
   // anchored to the edge while the cap takes over.
@@ -120,6 +194,8 @@ export default function ICBlock({ b, theme, scale }) {
         strokeDasharray={b.synthetic && packaged ? '3 3' : undefined}
         vectorEffect={packaged ? 'non-scaling-stroke' : undefined}
       />
+
+      {micro}
 
       {/* Die cavity outline inside the package body. */}
       {showCavity && (

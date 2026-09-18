@@ -1,5 +1,6 @@
 import { MACRO_TYPES, FAMILIES } from '../../shared/types.js';
 import { POWER_PITCH } from '../layout/constants.js';
+import { microDefs } from './micro.jsx';
 
 /**
  * Block fills, from a real die photograph.
@@ -167,6 +168,8 @@ export default function Patterns({ theme }) {
         <rect width="5" height="5" fill={theme.channel} />
         <line x1="0" y1="5" x2="5" y2="0" stroke={theme.channelHatch} strokeWidth="1" opacity="0.75" />
       </pattern>
+
+      {microDefs(theme)}
 
       {/* Uneven illumination - a die photo is never lit flat. */}
       <radialGradient id="die-light" cx="38%" cy="28%" r="78%">
