@@ -16,6 +16,9 @@ import { variantOf } from './color.js';
  * and it is also where a real block puts its guard ring - so the detail is
  * both authentic and guaranteed not to collide with children.
  */
+/** Screen cap resolved by CSS from the live zoom. See ICBlock for why. */
+const cap = (world, px) => `min(${world}px, calc(${px}px / var(--s, 1)))`;
+
 export default function MacroBlock({ b, theme, scale, closed }) {
   const t = theme.types[b.type] || theme.types.TYPE_CORE;
   const wPx = b.w * scale;
@@ -80,7 +83,8 @@ export default function MacroBlock({ b, theme, scale, closed }) {
         x={b.x} y={b.y} width={b.w} height={b.h}
         fill={`url(#pat-${b.type}-${variantOf(b.path)})`}
         stroke={t.edge}
-        strokeWidth={theme.packaged ? 1 : Math.min(1.8, 5 / scale)}
+        strokeWidth={theme.packaged ? 1 : undefined}
+        style={theme.packaged ? undefined : { strokeWidth: cap(1.8, 5) }}
         strokeOpacity={0.85}
         vectorEffect={theme.packaged ? 'non-scaling-stroke' : undefined}
       />
@@ -97,7 +101,7 @@ export default function MacroBlock({ b, theme, scale, closed }) {
       {guard && (
         <rect
           x={b.x + 2.5} y={b.y + 2.5} width={b.w - 5} height={b.h - 5}
-          fill="none" stroke={theme.guard} strokeWidth={Math.min(0.8, 2.5 / scale)} opacity="0.4"
+          fill="none" stroke={theme.guard} style={{ strokeWidth: cap(0.8, 2.5) }} opacity="0.4"
         />
       )}
 
@@ -145,20 +149,18 @@ export default function MacroBlock({ b, theme, scale, closed }) {
           fontFamily="var(--tech)" fontWeight="600" textAnchor="middle"
         >
           <text
-            x={cx} y={cy + annotation.fontSize * 0.34}
-            fontSize={annotation.fontSize} fill={t.ink}
-            letterSpacing={annotation.fontSize * 0.06}
-            stroke={theme.textHalo} strokeWidth={annotation.fontSize * 0.16}
+            x={cx} y={cy} dominantBaseline="central" fill={t.ink}
+            style={{ fontSize: cap(annotation.fontSize, 17), letterSpacing: '0.06em', strokeWidth: '0.16em' }}
+            stroke={theme.textHalo}
             strokeLinejoin="round" paintOrder="stroke"
           >
             {annotation.text}
           </text>
           {apparent > 150 && (
             <text
-              x={cx} y={cy + annotation.fontSize * 1.5}
-              fontSize={annotation.fontSize * 0.5} fill={t.stroke}
-              letterSpacing={annotation.fontSize * 0.14} opacity="0.75"
-              stroke={theme.textHalo} strokeWidth={annotation.fontSize * 0.1}
+              x={cx} y={cy} dy="2.6em" dominantBaseline="central" fill={t.stroke} opacity="0.75"
+              style={{ fontSize: cap(annotation.fontSize * 0.5, 8.5), letterSpacing: '0.28em', strokeWidth: '0.2em' }}
+              stroke={theme.textHalo}
               strokeLinejoin="round" paintOrder="stroke"
             >
               {`${tag} · ${b.childCount}`}

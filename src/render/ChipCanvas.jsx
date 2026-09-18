@@ -436,7 +436,8 @@ export default function ChipCanvas({
       >
         <Patterns theme={theme} />
 
-        <g transform={`translate(${view.x} ${view.y}) scale(${view.s})`}>
+        {/* --s is the live zoom, for the screen caps CSS resolves per frame. */}
+        <g transform={`translate(${view.x} ${view.y}) scale(${view.s})`} style={{ '--s': view.s }}>
           <DieChrome
             die={layout.die} theme={theme} meta={meta}
             stats={layout.stats} scale={lod} root={layout.blocks[0]}

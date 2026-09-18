@@ -68,8 +68,11 @@ export function truncate(text, maxPx, fontSize, min = 2) {
  * Returns null when the block cannot carry a legible label at all.
  */
 export function fitLabel(name, w, h, { maxFont = 10, pad = 8, bias = 1.3, min = 3 } = {}) {
-  const fontH = Math.max(5, Math.min(h * 0.26, w * 0.2, maxFont));
-  const fontV = Math.max(5, Math.min(w * 0.26, h * 0.2, maxFont));
+  // The screen cap (maxFont) has the last word. It used to be the other way
+  // round, so past ~3x the 5-unit floor won and labels grew with the zoom:
+  // 170px filenames at 35x, 750px at 150x.
+  const fontH = Math.min(maxFont, Math.max(5, Math.min(h * 0.26, w * 0.2)));
+  const fontV = Math.min(maxFont, Math.max(5, Math.min(w * 0.26, h * 0.2)));
 
   const em = emWidth(name);
   // How much of the name each orientation can show, as a fraction.
